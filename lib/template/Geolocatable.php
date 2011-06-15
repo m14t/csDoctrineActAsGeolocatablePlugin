@@ -6,6 +6,7 @@
  * @package    Locatable_Extension
  * @subpackage template
  * @author     Brent Shaffer
+ * @author     Matt Farmer <work@mattfarmer.net>
  * @copyright  Copyright (c) 2008 Centre{source}, Brent Shaffer 2008-12-22. All rights reserved.
  */
 class Doctrine_Template_Geolocatable extends Doctrine_Template
@@ -29,6 +30,7 @@ class Doctrine_Template_Geolocatable extends Doctrine_Template
                                     'options' =>  array('length' => 16, 'scale' => 10)),
                             ), 'fields'       => array(),
                                'distance_unit' => 'miles',
+                               'geocoder_class' => 'GoogleGeoCoder',
    );
 
   
@@ -86,39 +88,15 @@ class Doctrine_Template_Geolocatable extends Doctrine_Template
     return implode(', ', array_filter($query));
   }
 
-  public function buildUrlFromQuery($query)
-  {
-    return $this->_url
-            . '?'
-            . http_build_query(array('q' => $query, 'output' => 'csv'));
-  }
-  
-  public function retrieveGeocodesFromUrl($url)
-  {
-    $codes = explode(',', file_get_contents($url));
-    $geocodes = array('latitude' => null, 'longitude' => null);
-
-    if (count($codes) >= 4) 
-    {
-      $geocodes['latitude']  = $codes[2];
-      $geocodes['longitude'] = $codes[3];
-    }
-
-    return $geocodes;
-  }
-  
   public function refreshGeocodes($url = null)
   {
     $obj = $this->getInvoker();
 
-    if (!$url) 
-    {
-      $url = $this->buildUrlFromQuery($this->buildGeoQuery());
-    }
+    $geocoder_class = $this->_options['geocoder_class'];
+    $geocoder = new $geocoder_class($this->buildGeoQuery());
 
-    $geocodes = $this->retrieveGeocodesFromUrl($url);
-    $obj[$this->_options['columns']['latitude']['name']]  = $geocodes['latitude'];
-    $obj[$this->_options['columns']['longitude']['name']] = $geocodes['longitude'];
+    $obj[$this->_options['columns']['latitude']['name']]  = $geocoder->getLatitude();
+    $obj[$this->_options['columns']['longitude']['name']] = $geocoder->getLongitude();
   }
 
   public function addDistanceQueryTableProxy($query, $latitude, $longitude, $distance = null)
